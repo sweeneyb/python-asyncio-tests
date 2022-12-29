@@ -79,8 +79,7 @@ app = web.Application()
 app.add_routes([web.get('/', handle),
                 web.get('/{name}', handle)])
 
-task = web._run_app(app )
-loop.create_task(task)
+task = web.run_app(app , loop = loop)
 print("serving...")
 
 loop.run_forever()
