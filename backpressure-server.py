@@ -7,6 +7,7 @@ import os
 import random
 import threading
 import _thread
+from aiohttp import web
 
 PORT = 8000
 
@@ -45,33 +46,42 @@ async def randsleep(caller=None) -> None:
         print(f"{caller} sleeping for {i} seconds.")
     await asyncio.sleep(i)
 
-async def consume(name: int, q: asyncio.Queue) -> None:
-    while True:
-        time.sleep(4)
-        try:
-          i, t = q.get_nowait()
-          now = time.perf_counter()
-          print(f"Consumer {name} got element <{i}>"
-              f" in {now-t:0.5f} seconds.")
-          q.task_done()
-        except:
-          print("nothing in queue")
-
 async def consume_async(name: int, q: asyncio.Queue) -> None:
+    while True:
         #await randsleep(caller=f"Consumer {name}") 
-        print(f"Consumer {name} about to wait")
+        print(f"Consumer_async {name} about to wait")
         i, t = await q.get()
         now = time.perf_counter()
+        await asyncio.sleep(5)
         print(f"Consumer {name} got element <{i}>"
               f" in {now-t:0.5f} seconds.")
         q.task_done()
 
-t = threading.Thread(target=run)
-t.start()
-# _thread.start_new_thread(run)
-print("serving...")
+
+async def handle(request):
+    if(str(request.url).endswith('favicon.ico')):
+        return web.Response(status=404)
+    if(q.qsize() > 3):
+        return web.Response(status=429)
+    print(request.url)
+    name = request.match_info.get('name', "Anonymous")
+    text = "Hello, " + name + ", queue size: " + str(q.qsize())
+    i = makeitem()
+    t = time.perf_counter()
+    await q.put((i, t))
+    print(f"added to queue and size is now {q.qsize()}")
+    return web.Response(text=text)
+
 loop = asyncio.get_event_loop()
-loop.create_task(consume(1,q)) 
-# loop.create_task(consume_async(1,q))
+loop.create_task(consume_async(1,q)) 
+
+app = web.Application()
+app.add_routes([web.get('/', handle),
+                web.get('/{name}', handle)])
+
+task = web._run_app(app )
+loop.create_task(task)
+print("serving...")
+
 loop.run_forever()
 
