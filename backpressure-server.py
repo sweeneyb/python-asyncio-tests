@@ -79,8 +79,8 @@ app = web.Application()
 app.add_routes([web.get('/', handle),
                 web.get('/{name}', handle)])
 
+# This runs until completion, so schedule all of your coroutines for the loop above
 task = web.run_app(app , loop = loop)
 print("serving...")
 
-loop.run_forever()
 
